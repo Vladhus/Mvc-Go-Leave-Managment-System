@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MvcGo.Contracts;
@@ -11,6 +12,7 @@ using MvcGo.Models;
 
 namespace MvcGo.Controllers
 {
+    [Authorize(Roles ="Administrator")]
     public class LeaveTypesController : Controller
     {
         private readonly ILeaveTypeRepository _repo;
@@ -21,6 +23,7 @@ namespace MvcGo.Controllers
             _repo = repo;
             _mapper = mapper;
         }
+        
         // GET: LeaveTypesController
         public ActionResult Index()
         {
