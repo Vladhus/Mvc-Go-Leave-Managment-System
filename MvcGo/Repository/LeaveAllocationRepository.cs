@@ -1,4 +1,5 @@
-﻿using MvcGo.Contracts;
+﻿using Microsoft.EntityFrameworkCore;
+using MvcGo.Contracts;
 using MvcGo.Data;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,13 @@ namespace MvcGo.Repository
         {
             _db = db;
         }
+
+        public bool CheckAllocation(int leavetypeId, string employeeId)
+        {
+            var period = DateTime.Now.Year;
+            return FindAll().Where(q => q.EmployeeId == employeeId && q.LeaveTypeId == leavetypeId && q.Period == period).Any();
+        }
+
         public bool Create(LeaveAllocation entity)
         {
             _db.LeaveAllocations.Add(entity);
@@ -29,12 +37,20 @@ namespace MvcGo.Repository
 
         public ICollection<LeaveAllocation> FindAll()
         {
-            return _db.LeaveAllocations.ToList();
+            return _db.LeaveAllocations.Include(q=>q.LeaveType).ToList();
         }
 
         public LeaveAllocation FindById(int id)
         {
-            return _db.LeaveAllocations.Find(id);
+            return _db.LeaveAllocations.Include(q=>q.Employee).Include(q=>q.LeaveType).FirstOrDefault(q=>q.Id == id);
+        }
+
+        public ICollection<LeaveAllocation> GetLeaveAllocationsByEmployee(string id)
+        {
+            var period = DateTime.Now.Year;
+            return FindAll()
+                .Where(q => q.EmployeeId == id && q.Period == period)
+                .ToList();
         }
 
         public bool isExists(int id)
