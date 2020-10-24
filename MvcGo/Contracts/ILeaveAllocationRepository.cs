@@ -10,5 +10,6 @@ namespace MvcGo.Contracts
     {
         bool CheckAllocation(int leavetypeId, string employeeId);
         ICollection<LeaveAllocation> GetLeaveAllocationsByEmployee(string id);
+        LeaveAllocation GetLeaveAllocationsByEmployeeAndType(string id,int leavetypeid);
     }
 }

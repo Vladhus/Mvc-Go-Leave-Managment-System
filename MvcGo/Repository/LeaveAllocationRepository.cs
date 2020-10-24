@@ -53,6 +53,13 @@ namespace MvcGo.Repository
                 .ToList();
         }
 
+        public LeaveAllocation GetLeaveAllocationsByEmployeeAndType(string id, int leavetypeid)
+        {
+            var period = DateTime.Now.Year;
+            return FindAll()
+                .FirstOrDefault(q => q.EmployeeId == id && q.Period == period && q.LeaveTypeId == leavetypeid);
+        }
+
         public bool isExists(int id)
         {
             var exists = _db.LeaveAllocations.Any(q => q.Id == id);
