@@ -3,13 +3,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
+using Microsoft.EntityFrameworkCore;
 namespace MvcGo.Contracts
 {
     public interface ILeaveAllocationRepository : IRepositoryBase<LeaveAllocation>
     {
-        bool CheckAllocation(int leavetypeId, string employeeId);
-        ICollection<LeaveAllocation> GetLeaveAllocationsByEmployee(string id);
-        LeaveAllocation GetLeaveAllocationsByEmployeeAndType(string id,int leavetypeid);
+        //bool CheckAllocation(int leavetypeId, string employeeId);
+        //ICollection<LeaveAllocation> GetLeaveAllocationsByEmployee(string id);
+        //LeaveAllocation GetLeaveAllocationsByEmployeeAndType(string id,int leavetypeid);
+
+        Task<bool> CheckAllocation(int leavetypeid, string employeeid);
+        Task<ICollection<LeaveAllocation>> GetLeaveAllocationsByEmployee(string employeeid);
+        Task<LeaveAllocation> GetLeaveAllocationsByEmployeeAndType(string employeeid, int leavetypeid);
     }
 }
