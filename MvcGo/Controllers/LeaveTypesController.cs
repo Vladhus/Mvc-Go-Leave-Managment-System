@@ -16,18 +16,21 @@ namespace MvcGo.Controllers
     public class LeaveTypesController : Controller
     {
         private readonly ILeaveTypeRepository _repo;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public LeaveTypesController(ILeaveTypeRepository repo, IMapper mapper)
+        public LeaveTypesController(ILeaveTypeRepository repo, IMapper mapper, IUnitOfWork unitOfWork)
         {
             _repo = repo;
             _mapper = mapper;
+            _unitOfWork = unitOfWork;
         }
         
         // GET: LeaveTypesController
         public async Task<ActionResult> Index()
         {
-            var leavetypes = await _repo.FindAll();
+           // var leavetypes = await _repo.FindAll();
+            var leavetypes = await _unitOfWork.LeaveTypes.FindAll();
             var model = _mapper.Map<List<LeaveType>, List<LeaveTypeVM>>(leavetypes.ToList());
             return View(model);
         }
@@ -35,12 +38,14 @@ namespace MvcGo.Controllers
         // GET: LeaveTypesController/Details/5
         public async Task<ActionResult> Details(int id)
         {
-            var isExists = await _repo.isExists(id);
+            //var isExists = await _repo.isExists(id);
+            var isExists = await _unitOfWork.LeaveTypes.isExists(q => q.Id == id);
             if (!isExists)
             {
                 return NotFound();
             }
-            var leaveType = await _repo.FindById(id);
+            //var leaveType = await _repo.FindById(id);
+            var leaveType = await _unitOfWork.LeaveTypes.Find(q => q.Id == id);
             var model = _mapper.Map<LeaveTypeVM>(leaveType);
             return View(model);
         }
@@ -65,12 +70,10 @@ namespace MvcGo.Controllers
 
                 var leaveType = _mapper.Map<LeaveType>(model);
                 leaveType.DateCreated = DateTime.Now;
-                var isSuccess = await _repo.Create(leaveType);
-                if (!isSuccess)
-                {
-                    ModelState.AddModelError("", "Somethig Went Wrong...");
-                    return View(model);
-                }
+                
+                //var isSuccess = await _repo.Create(leaveType);
+                await _unitOfWork.LeaveTypes.Create(leaveType);
+                await _unitOfWork.Save();
 
                 return RedirectToAction(nameof(Index));
             }
@@ -84,12 +87,14 @@ namespace MvcGo.Controllers
         // GET: LeaveTypesController/Edit/5
         public async Task<ActionResult> Edit(int id)
         {
-            var isExists = await _repo.isExists(id);
+            //var isExists = await _repo.isExists(id);
+            var isExists = await _unitOfWork.LeaveTypes.isExists(q => q.Id == id);
             if (!isExists)
             {
                 return NotFound();
             }
-            var leaveType = await _repo.FindById(id);
+            //var leaveType = await _repo.FindById(id);
+            var leaveType = await _unitOfWork.LeaveTypes.Find(q => q.Id == id);
             var model = _mapper.Map<LeaveTypeVM>(leaveType);
             return View(model);
         }
@@ -106,12 +111,14 @@ namespace MvcGo.Controllers
                     return View(model);
                 }
                 var leaveType = _mapper.Map<LeaveType>(model);
-                var isSuccess = await _repo.Update(leaveType);
-                if (!isSuccess)
-                {
-                    ModelState.AddModelError("", "Somethig Went Wrong...");
-                    return View(model);
-                }
+                //var isSuccess = await _repo.Update(leaveType);
+                //if (!isSuccess)
+                //{
+                //    ModelState.AddModelError("", "Somethig Went Wrong...");
+                //    return View(model);
+                //}
+                _unitOfWork.LeaveTypes.Update(leaveType);
+                await _unitOfWork.Save();
                 return RedirectToAction(nameof(Index));
             }
             catch
@@ -124,16 +131,16 @@ namespace MvcGo.Controllers
         // GET: LeaveTypesController/Delete/5
         public async Task<ActionResult> Delete(int id)
         {
-            var leaveType = await _repo.FindById(id);
+            //var leaveType = await _repo.FindById(id);
+            var leaveType = await _unitOfWork.LeaveTypes.Find(expression: q => q.Id == id);
             if (leaveType == null)
             {
                 return NotFound();
             }
-            var isSuccess = await _repo.Delete(leaveType);
-            if (!isSuccess)
-            {
-                return BadRequest();
-            }
+
+            _unitOfWork.LeaveTypes.Delete(leaveType);
+            await _unitOfWork.Save();
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -144,22 +151,28 @@ namespace MvcGo.Controllers
         {
             try
             {
-                var leaveType = await _repo.FindById(id);
+                //var leaveType = await _repo.FindById(id);
+                var leaveType = await _unitOfWork.LeaveTypes.Find(expression: q => q.Id == id);
                 if (leaveType == null)
                 {
                     return NotFound();
                 }
-                var isSuccess = await _repo.Delete(leaveType);
-                if (!isSuccess)
-                {
-                    return View(model);
-                }
+
+                _unitOfWork.LeaveTypes.Delete(leaveType);
+                await _unitOfWork.Save();
+
                 return RedirectToAction(nameof(Index));
             }
             catch
             {
                 return View(model);
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            _unitOfWork.Dispose();
+            base.Dispose(disposing);
         }
     }
 }

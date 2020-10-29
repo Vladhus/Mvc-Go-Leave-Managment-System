@@ -1,22 +1,13 @@
 ﻿using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
+using System.Linq;
+using System;
 
 namespace MvcGo.Contracts
 {
     public interface IRepositoryBase<T> where T : class
     {
-        //ICollection<T> FindAll();
-
-        //T FindById(int id);
-
-        //bool isExists(int id);
-
-        //bool Create(T entity);
-        //bool Update(T entity);
-        //bool Delete(T entity);
-
-        //bool Save();э
-
         Task<ICollection<T>> FindAll();
 
         Task<T> FindById(int id);
@@ -28,5 +19,22 @@ namespace MvcGo.Contracts
         Task<bool> Delete(T entity);
 
         Task<bool> Save();
+    }
+
+    public interface IGenericRepository<T> where T : class
+    {
+        Task<List<T>> FindAll(
+            Expression<Func<T,bool>> expression = null,
+            Func<IQueryable<T>,IOrderedQueryable<T>> orderBy = null,
+            List<string>includes = null
+            );
+
+        Task<T> Find(Expression<Func<T, bool>> expression, List<string> includes = null);
+
+        Task<bool> isExists(Expression<Func<T, bool>> expression = null);
+
+        Task Create(T entity);
+        void Update(T entity);
+        void Delete(T entity);
     }
 }

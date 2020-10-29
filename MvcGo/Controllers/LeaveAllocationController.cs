@@ -17,15 +17,13 @@ namespace MvcGo.Controllers
     [Authorize(Roles = "Administrator")]
     public class LeaveAllocationController : Controller
     {
-        private readonly ILeaveTypeRepository _leaverepo;
-        private readonly ILeaveAllocationRepository _leaveallocationrepo;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly UserManager<Employee> _userManager;
 
-        public LeaveAllocationController(ILeaveTypeRepository leaverepo, ILeaveAllocationRepository leaveallocationrepo, IMapper mapper,UserManager<Employee> userManager)
+        public LeaveAllocationController(IMapper mapper,UserManager<Employee> userManager, IUnitOfWork unitOfWork)
         {
-            _leaveallocationrepo = leaveallocationrepo;
-            _leaverepo = leaverepo;
+            _unitOfWork = unitOfWork;
             _mapper = mapper;
             _userManager = userManager;
         }
@@ -34,7 +32,8 @@ namespace MvcGo.Controllers
         // GET: LeaveAllocationController
         public async Task<ActionResult> Index()
         {
-            var leavetypes = await _leaverepo.FindAll();
+            var leavetypes = await _unitOfWork.LeaveTypes.FindAll();
+
             var mappedLeaveTypes = _mapper.Map<List<LeaveType>, List<LeaveTypeVM>>(leavetypes.ToList());
             var model = new CreateLeaveAllocationVM
             {
@@ -46,11 +45,15 @@ namespace MvcGo.Controllers
 
         public async Task<ActionResult> SetLeave(int id)
         {
-            var leavetype = await _leaverepo.FindById(id);
+            var leavetype = await _unitOfWork.LeaveTypes.Find(q => q.Id == id);
             var employees = await _userManager.GetUsersInRoleAsync("Employee");
+            var period = DateTime.Now.Year;
             foreach (var emp in employees)
             {
-                if (await _leaveallocationrepo.CheckAllocation(id, emp.Id))
+               
+                if (await _unitOfWork.LeaveAllocations.isExists(q => q.EmployeeId == emp.Id
+                                       && q.LeaveTypeId == id
+                                       && q.Period == period))
                     continue;
 
                 var allocation = new LeaveAllocationVM
@@ -62,7 +65,9 @@ namespace MvcGo.Controllers
                     Period = DateTime.Now.Year
                 };
                 var leaveAllocation = _mapper.Map<LeaveAllocation>(allocation);
-                await _leaveallocationrepo.Create(leaveAllocation);
+
+                await _unitOfWork.LeaveAllocations.Create(leaveAllocation);
+                await _unitOfWork.Save();
             }
             return RedirectToAction(nameof(Index));
         }
@@ -79,7 +84,8 @@ namespace MvcGo.Controllers
         public async Task<ActionResult> Details(string id)
         {
             var employee = _mapper.Map<EmployeeVM>(await _userManager.FindByIdAsync(id));
-            var allocations = _mapper.Map<List<LeaveAllocationVM>>(await _leaveallocationrepo.GetLeaveAllocationsByEmployee(id));
+            var period = DateTime.Now.Year;
+            var allocations = _mapper.Map<List<LeaveAllocationVM>>(await _unitOfWork.LeaveAllocations.FindAll(expression: q => q.EmployeeId == id && q.Period == period,includes: new List<string> { "LeaveType" }));
             var model = new ViewAllocationsVM
             {
                 Employee = employee,
@@ -112,7 +118,7 @@ namespace MvcGo.Controllers
         // GET: LeaveAllocationController/Edit/5
         public async Task<ActionResult> Edit(int id)
         {
-            var leaveallocation = await _leaveallocationrepo.FindById(id);
+            var leaveallocation = await _unitOfWork.LeaveAllocations.Find(expression: q => q.Id == id,includes: new List<string> { "Employee", "LeaveType" });
             var model = _mapper.Map<EditLeaveAllocationVM>(leaveallocation);
 
             return View(model);
@@ -129,14 +135,12 @@ namespace MvcGo.Controllers
                 {
                     return View(model);
                 }
-                var record = await _leaveallocationrepo.FindById(model.Id);
+                var record = await _unitOfWork.LeaveAllocations.Find(expression: q => q.Id == model.Id);
+
                 record.NumberOfDays = model.NumberOfDays;
-                var isSuccess = await _leaveallocationrepo.Update(record);
-                if (!isSuccess)
-                {
-                    ModelState.AddModelError("", "Error while saving");
-                    return View(model);
-                }
+                _unitOfWork.LeaveAllocations.Update(record);
+                await _unitOfWork.Save();
+           
                 return RedirectToAction(nameof(Details),new {id = model.EmployeeId});
 
             }
@@ -165,6 +169,12 @@ namespace MvcGo.Controllers
             {
                 return View();
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            _unitOfWork.Dispose();
+            base.Dispose(disposing);
         }
     }
 }
